@@ -1,6 +1,6 @@
 # Local LLM Video Captioning — Русская версия
 
-![Preview](./preview.jpg)
+<video src="./Example.mp4" controls width="100%"></video>
 
 Локальное описание видео по кадрам на **русском языке** с помощью vision-модели, работающей полностью на вашем Mac. Никакие данные не отправляются в облако.
 
