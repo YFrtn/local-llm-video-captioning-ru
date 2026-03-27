@@ -15,29 +15,6 @@ const INITIAL_SYSTEM_INFO = {
   memory: '',
 };
 
-const AVAILABLE_MODELS = [
-  {
-    id: 'mlx-community/Qwen3.5-0.8B-MLX-8bit',
-    label: 'Qwen 3.5 0.8B',
-    size: '~1 ГБ',
-    ram: '4+ ГБ',
-    description: 'Быстрая, по умолчанию',
-  },
-  {
-    id: 'mlx-community/Qwen2.5-VL-3B-Instruct-8bit',
-    label: 'Qwen 2.5 VL 3B',
-    size: '~3 ГБ',
-    ram: '8+ ГБ',
-    description: 'Баланс скорости и качества',
-  },
-  {
-    id: 'mlx-community/Qwen2.5-VL-7B-Instruct-8bit',
-    label: 'Qwen 2.5 VL 7B',
-    size: '~7 ГБ',
-    ram: '16+ ГБ',
-    description: 'Высокое качество',
-  },
-];
 
 function formatClock(seconds) {
   if (!Number.isFinite(seconds)) {
@@ -196,35 +173,6 @@ function TranscriptRow({ item, active = false }) {
   );
 }
 
-function LoadingBar() {
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - start) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
-  const timeLabel = minutes > 0
-    ? `${minutes} мин ${String(seconds).padStart(2, '0')} сек`
-    : `${seconds} сек`;
-
-  return (
-    <div className="mt-3 w-full max-w-sm">
-      <div className="flex items-center justify-between text-xs text-mist/50">
-        <span>Загрузка модели...</span>
-        <span>{timeLabel}</span>
-      </div>
-      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full border border-white/10 bg-white/5">
-        <div className="h-full w-1/3 animate-[shimmer_1.5s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-tide/40 via-tide to-tide/40" />
-      </div>
-    </div>
-  );
-}
 
 export default function App() {
   const videoRef = useRef(null);
@@ -249,66 +197,7 @@ export default function App() {
   const [history, setHistory] = useState(() => loadHistory());
   const [showHistory, setShowHistory] = useState(false);
   const [viewingSession, setViewingSession] = useState(null);
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
-  const [modelLoading, setModelLoading] = useState(false);
   const savedRef = useRef(false);
-
-  const previousModelRef = useRef(AVAILABLE_MODELS[0].id);
-
-  const handleModelChange = async (modelId) => {
-    if (modelId === selectedModel || modelLoading || isStreaming) return;
-    previousModelRef.current = selectedModel;
-    setSelectedModel(modelId);
-    setModelLoading(true);
-    setStatus({ state: 'warming', detail: `Загрузка модели...` });
-
-    try {
-      const response = await fetch('/api/model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: modelId }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStatus({ state: 'online', detail: `Модель готова: ${modelId}` });
-      } else {
-        setStatus({ state: 'offline', detail: data.error || 'Ошибка загрузки модели' });
-      }
-    } catch (error) {
-      setStatus({ state: 'offline', detail: 'Ошибка соединения с сервером' });
-    } finally {
-      setModelLoading(false);
-    }
-  };
-
-  const handleCancelLoad = async () => {
-    try {
-      await fetch('/api/model/cancel', { method: 'POST' });
-    } catch {}
-    setModelLoading(false);
-    setSelectedModel(previousModelRef.current);
-    setStatus({ state: 'online', detail: `Модель готова: ${previousModelRef.current}` });
-  };
-
-  const handleDeleteModel = async (modelId) => {
-    try {
-      const response = await fetch('/api/model/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: modelId }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setErrorMessage('');
-      } else {
-        setErrorMessage(data.error || 'Ошибка удаления');
-      }
-    } catch {
-      setErrorMessage('Ошибка соединения с сервером');
-    }
-  };
 
   const stats = [
     { label: 'Кадры', value: String(entries.length + (isStreaming ? 1 : 0)).padStart(2, '0') },
@@ -597,38 +486,6 @@ export default function App() {
                   {modelStatusLabel}
                 </div>
                 <p className="text-sm leading-7 text-mist/68">{status.detail}</p>
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => handleModelChange(e.target.value)}
-                    disabled={modelLoading || isStreaming}
-                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-2 text-sm text-white backdrop-blur transition hover:bg-white/12 focus:border-tide/40 focus:outline-none disabled:opacity-40"
-                  >
-                    {AVAILABLE_MODELS.map((m) => (
-                      <option key={m.id} value={m.id} className="bg-ink text-white">
-                        {m.label} — {m.size} ({m.description})
-                      </option>
-                    ))}
-                  </select>
-                  {modelLoading && (
-                    <button
-                      onClick={handleCancelLoad}
-                      className="rounded-xl border border-ember/30 bg-ember/10 px-3 py-2 text-xs font-semibold text-ember transition hover:bg-ember/20"
-                    >
-                      Отмена
-                    </button>
-                  )}
-                  {!modelLoading && !isStreaming && selectedModel !== AVAILABLE_MODELS[0].id && (
-                    <button
-                      onClick={() => handleDeleteModel(selectedModel)}
-                      className="rounded-xl border border-white/15 bg-white/8 px-3 py-2 text-xs text-mist/60 transition hover:border-ember/30 hover:text-ember"
-                      title="Удалить модель из кэша"
-                    >
-                      Удалить
-                    </button>
-                  )}
-                </div>
-                {modelLoading && <LoadingBar />}
               </div>
             ) : null}
             {systemInfoLabel ? (
