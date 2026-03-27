@@ -24,11 +24,16 @@ export default {
       },
       animation: {
         pulseLine: 'pulseLine 1.4s ease-in-out infinite',
+        shimmer: 'shimmer 1.5s ease-in-out infinite',
       },
       keyframes: {
         pulseLine: {
           '0%, 100%': { opacity: 0.35 },
           '50%': { opacity: 1 },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(300%)' },
         },
       },
     },

@@ -196,6 +196,36 @@ function TranscriptRow({ item, active = false }) {
   );
 }
 
+function LoadingBar() {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  const timeLabel = minutes > 0
+    ? `${minutes} мин ${String(seconds).padStart(2, '0')} сек`
+    : `${seconds} сек`;
+
+  return (
+    <div className="mt-3 w-full max-w-sm">
+      <div className="flex items-center justify-between text-xs text-mist/50">
+        <span>Загрузка модели...</span>
+        <span>{timeLabel}</span>
+      </div>
+      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full border border-white/10 bg-white/5">
+        <div className="h-full w-1/3 animate-[shimmer_1.5s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-tide/40 via-tide to-tide/40" />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -598,6 +628,7 @@ export default function App() {
                     </button>
                   )}
                 </div>
+                {modelLoading && <LoadingBar />}
               </div>
             ) : null}
             {systemInfoLabel ? (
