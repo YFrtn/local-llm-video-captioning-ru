@@ -474,7 +474,7 @@ export default function App() {
         <header className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-panel backdrop-blur-2xl lg:flex-row lg:items-end lg:justify-between">
           <div className="w-full text-center">
             <h1 className="font-display text-3xl leading-tight text-white">
-              Описание видео по кадрам — Qwen3.5 MLX
+              Описание видео по кадрам
             </h1>
             {!showUnavailableState ? (
               <div className="mt-4 flex flex-col items-center gap-3">
