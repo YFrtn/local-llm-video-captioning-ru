@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { exportMarkdown, exportPdf } from './export.js';
+import { loadHistory, saveSession, deleteSession } from './history.js';
 
 const SYSTEM_PROMPT =
   'Опиши текущий кадр видео как краткую живую стенограмму на русском языке. Сосредоточься на видимых действиях, изменениях в кадре, тексте на экране, людях, объектах и движении. Избегай домыслов.';
@@ -191,6 +192,10 @@ export default function App() {
   const [videoReady, setVideoReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [requestCount, setRequestCount] = useState(0);
+  const [history, setHistory] = useState(() => loadHistory());
+  const [showHistory, setShowHistory] = useState(false);
+  const [viewingSession, setViewingSession] = useState(null);
+  const savedRef = useRef(false);
 
   const stats = [
     { label: 'Captured Frames', value: String(entries.length + (isStreaming ? 1 : 0)).padStart(2, '0') },
@@ -287,10 +292,24 @@ export default function App() {
     transcriptEndRef.current?.scrollIntoView({ block: 'end' });
   }, [entries.length, liveText]);
 
+  const saveCurrentSession = () => {
+    setEntries((current) => {
+      if (current.length > 0 && !savedRef.current) {
+        const session = saveSession(videoName, current);
+        if (session) {
+          setHistory(loadHistory());
+          savedRef.current = true;
+        }
+      }
+      return current;
+    });
+  };
+
   const resetSession = () => {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
     isStreamingRef.current = false;
+    savedRef.current = false;
     setEntries([]);
     setLiveText('');
     setLiveTime(0);
@@ -313,6 +332,7 @@ export default function App() {
       return;
     }
 
+    saveCurrentSession();
     resetSession();
 
     if (currentObjectUrlRef.current) {
@@ -530,6 +550,8 @@ npm run api`}
                       playsInline
                       src={videoSource}
                       onCanPlay={() => setVideoReady(true)}
+                      onPause={() => saveCurrentSession()}
+                      onEnded={() => saveCurrentSession()}
                       onPlay={() => {
                         if (status.state !== 'online') {
                           videoRef.current?.pause();
@@ -587,35 +609,110 @@ npm run api`}
             </div>
 
             <aside className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/6 shadow-panel backdrop-blur-2xl">
-              {entries.length > 0 && (
-                <div className="flex items-center justify-end gap-2 border-b border-white/10 px-5 py-3">
-                  <button
-                    onClick={() => exportMarkdown(entries, videoName)}
-                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
-                  >
-                    Скачать MD
-                  </button>
-                  <button
-                    onClick={() => exportPdf(entries, videoName)}
-                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
-                  >
-                    Скачать PDF
-                  </button>
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+                <button
+                  onClick={() => { setShowHistory(!showHistory); setViewingSession(null); }}
+                  className={`rounded-xl border px-3 py-1.5 font-mono text-xs transition ${
+                    showHistory
+                      ? 'border-tide/40 bg-tide/15 text-tide'
+                      : 'border-white/15 bg-white/8 text-mist/80 hover:bg-white/15'
+                  }`}
+                >
+                  История {history.length > 0 ? `(${history.length})` : ''}
+                </button>
+                <div className="flex gap-2">
+                  {(viewingSession || entries.length > 0) && (
+                    <>
+                      <button
+                        onClick={() => exportMarkdown(viewingSession?.entries || entries, viewingSession?.videoName || videoName)}
+                        className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
+                      >
+                        Скачать MD
+                      </button>
+                      <button
+                        onClick={() => exportPdf(viewingSession?.entries || entries, viewingSession?.videoName || videoName)}
+                        className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
+                      >
+                        Скачать PDF
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
-              <div className="flex max-h-[760px] min-h-[760px] flex-col gap-4 overflow-y-auto p-5">
-                {transcriptItems.length ? (
-                  transcriptItems.map((item) => <TranscriptRow key={item.id} item={item} />)
-                ) : (
-                  <div className="flex h-full min-h-[320px] items-center justify-center rounded-[1.8rem] border border-dashed border-white/12 bg-black/10 p-8 text-center">
-                    <div className="max-w-sm">
-                      <p className="text-sm leading-7 text-mist/65">Press play.</p>
+              </div>
+
+              {showHistory && !viewingSession ? (
+                <div className="flex max-h-[760px] min-h-[760px] flex-col gap-3 overflow-y-auto p-5">
+                  {history.length > 0 ? (
+                    history.map((session) => (
+                      <div
+                        key={session.id}
+                        className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
+                      >
+                        <button
+                          onClick={() => setViewingSession(session)}
+                          className="flex-1 text-left"
+                        >
+                          <p className="text-sm font-semibold text-white">{session.videoName}</p>
+                          <p className="mt-1 font-mono text-xs text-mist/50">
+                            {new Date(session.date).toLocaleString('ru-RU')} · {session.entries.length} кадров
+                          </p>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const updated = deleteSession(session.id);
+                            setHistory(updated);
+                          }}
+                          className="ml-3 rounded-lg border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-mist/40 opacity-0 transition hover:border-ember/30 hover:text-ember group-hover:opacity-100"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex h-full min-h-[320px] items-center justify-center rounded-[1.8rem] border border-dashed border-white/12 bg-black/10 p-8 text-center">
+                      <div className="max-w-sm">
+                        <p className="text-sm leading-7 text-mist/65">История пуста.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : showHistory && viewingSession ? (
+                <div className="flex max-h-[760px] min-h-[760px] flex-col overflow-y-auto">
+                  <div className="flex items-center gap-3 border-b border-white/10 px-5 py-3">
+                    <button
+                      onClick={() => setViewingSession(null)}
+                      className="rounded-lg border border-white/15 bg-white/8 px-2 py-1 font-mono text-xs text-mist/80 transition hover:bg-white/15"
+                    >
+                      ← Назад
+                    </button>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{viewingSession.videoName}</p>
+                      <p className="font-mono text-xs text-mist/50">
+                        {new Date(viewingSession.date).toLocaleString('ru-RU')} · {viewingSession.entries.length} кадров
+                      </p>
                     </div>
                   </div>
-                )}
-                {currentStreamItem ? <TranscriptRow item={currentStreamItem} active /> : null}
-                <div ref={transcriptEndRef} />
-              </div>
+                  <div className="flex flex-col gap-4 p-5">
+                    {viewingSession.entries.map((item) => (
+                      <TranscriptRow key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex max-h-[760px] min-h-[760px] flex-col gap-4 overflow-y-auto p-5">
+                  {transcriptItems.length ? (
+                    transcriptItems.map((item) => <TranscriptRow key={item.id} item={item} />)
+                  ) : (
+                    <div className="flex h-full min-h-[320px] items-center justify-center rounded-[1.8rem] border border-dashed border-white/12 bg-black/10 p-8 text-center">
+                      <div className="max-w-sm">
+                        <p className="text-sm leading-7 text-mist/65">Нажмите play.</p>
+                      </div>
+                    </div>
+                  )}
+                  {currentStreamItem ? <TranscriptRow item={currentStreamItem} active /> : null}
+                  <div ref={transcriptEndRef} />
+                </div>
+              )}
             </aside>
           </section>
         )}
