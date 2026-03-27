@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 const app = express();
 const port = Number(process.env.API_PORT || 8787);
 const upstreamBaseUrl = process.env.MLX_VLM_BASE_URL || 'http://127.0.0.1:8081';
-const defaultModel = process.env.MLX_MODEL_ID || 'mlx-community/Qwen3.5-0.8B-MLX-8bit';
+let currentModel = process.env.MLX_MODEL_ID || 'mlx-community/Qwen3.5-0.8B-MLX-8bit';
 const maxTokens = Number(process.env.MLX_MAX_TOKENS || 180);
 const warmupTimeoutMs = Number(process.env.MLX_WARMUP_TIMEOUT_MS || 900000);
 const warmupImageDataUrl =
@@ -162,7 +162,7 @@ async function warmupModel() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: defaultModel,
+        model: currentModel,
         stream: false,
         temperature: 0,
         max_tokens: 12,
@@ -178,7 +178,7 @@ async function warmupModel() {
 
     await response.json();
     readyState = 'ready';
-    readyDetail = `Модель готова: ${defaultModel}`;
+    readyDetail = `Модель готова: ${currentModel}`;
   } finally {
     clearTimeout(timeout);
   }
@@ -191,7 +191,7 @@ async function ensureModelReady() {
 
   if (!warmupPromise) {
     readyState = 'warming';
-    readyDetail = `Прогрев модели: ${defaultModel}`;
+    readyDetail = `Прогрев модели: ${currentModel}`;
     warmupPromise = warmupModel()
       .catch((error) => {
         readyState = 'offline';
@@ -216,7 +216,7 @@ app.get('/api/health', async (_req, res) => {
       return res.status(503).json({
         upstream: 'offline',
         ready: false,
-        model: defaultModel,
+        model: currentModel,
         baseUrl: upstreamBaseUrl,
         detail: payload,
       });
@@ -227,7 +227,7 @@ app.get('/api/health', async (_req, res) => {
     res.json({
       upstream: 'online',
       ready: true,
-      model: defaultModel,
+      model: currentModel,
       baseUrl: upstreamBaseUrl,
       detail: readyDetail,
       upstreamDetail: payload,
@@ -238,11 +238,39 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({
       upstream: warming ? 'warming' : 'offline',
       ready: false,
-      model: defaultModel,
+      model: currentModel,
       baseUrl: upstreamBaseUrl,
       detail: warming ? readyDetail : 'Ошибка прогрева модели.',
       error: isAbort ? 'Warm-up timed out.' : error.message,
     });
+  }
+});
+
+app.get('/api/model', (_req, res) => {
+  res.json({ model: currentModel });
+});
+
+app.post('/api/model', async (req, res) => {
+  const { model } = req.body ?? {};
+
+  if (!model || typeof model !== 'string') {
+    return res.status(400).json({ error: 'model is required.' });
+  }
+
+  if (model === currentModel && readyState === 'ready') {
+    return res.json({ model: currentModel, status: 'already_loaded' });
+  }
+
+  currentModel = model;
+  readyState = 'warming';
+  readyDetail = `Загрузка модели: ${currentModel}`;
+  warmupPromise = null;
+
+  try {
+    await ensureModelReady();
+    res.json({ model: currentModel, status: 'ready' });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Ошибка загрузки модели.' });
   }
 });
 
@@ -280,7 +308,7 @@ app.post('/api/describe/stream', async (req, res) => {
   });
 
   writeSse(res, 'start', {
-    model: defaultModel,
+    model: currentModel,
     frameTimeSeconds,
   });
 
@@ -294,7 +322,7 @@ app.post('/api/describe/stream', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: defaultModel,
+        model: currentModel,
         stream: true,
         temperature: 0.1,
         max_tokens: maxTokens,
@@ -400,5 +428,5 @@ app.post('/api/describe/stream', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Streaming API listening on http://127.0.0.1:${port}`);
-  console.log(`Proxying requests to ${upstreamBaseUrl} using model ${defaultModel}`);
+  console.log(`Proxying requests to ${upstreamBaseUrl} using model ${currentModel}`);
 });

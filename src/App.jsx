@@ -15,6 +15,30 @@ const INITIAL_SYSTEM_INFO = {
   memory: '',
 };
 
+const AVAILABLE_MODELS = [
+  {
+    id: 'mlx-community/Qwen3.5-0.8B-MLX-8bit',
+    label: 'Qwen 3.5 0.8B',
+    size: '~1 ГБ',
+    ram: '4+ ГБ',
+    description: 'Быстрая, по умолчанию',
+  },
+  {
+    id: 'mlx-community/Qwen2.5-VL-3B-Instruct-8bit',
+    label: 'Qwen 2.5 VL 3B',
+    size: '~3 ГБ',
+    ram: '8+ ГБ',
+    description: 'Баланс скорости и качества',
+  },
+  {
+    id: 'mlx-community/Qwen2.5-VL-7B-Instruct-8bit',
+    label: 'Qwen 2.5 VL 7B',
+    size: '~7 ГБ',
+    ram: '16+ ГБ',
+    description: 'Высокое качество',
+  },
+];
+
 function formatClock(seconds) {
   if (!Number.isFinite(seconds)) {
     return '00:00.0';
@@ -195,7 +219,36 @@ export default function App() {
   const [history, setHistory] = useState(() => loadHistory());
   const [showHistory, setShowHistory] = useState(false);
   const [viewingSession, setViewingSession] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id);
+  const [modelLoading, setModelLoading] = useState(false);
   const savedRef = useRef(false);
+
+  const handleModelChange = async (modelId) => {
+    if (modelId === selectedModel || modelLoading || isStreaming) return;
+    setSelectedModel(modelId);
+    setModelLoading(true);
+    setStatus({ state: 'warming', detail: `Загрузка модели...` });
+
+    try {
+      const response = await fetch('/api/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: modelId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus({ state: 'online', detail: `Модель готова: ${modelId}` });
+      } else {
+        setStatus({ state: 'offline', detail: data.error || 'Ошибка загрузки модели' });
+      }
+    } catch (error) {
+      setStatus({ state: 'offline', detail: 'Ошибка соединения с сервером' });
+    } finally {
+      setModelLoading(false);
+    }
+  };
 
   const stats = [
     { label: 'Кадры', value: String(entries.length + (isStreaming ? 1 : 0)).padStart(2, '0') },
@@ -484,6 +537,20 @@ export default function App() {
                   {modelStatusLabel}
                 </div>
                 <p className="text-sm leading-7 text-mist/68">{status.detail}</p>
+                <div className="mt-3">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => handleModelChange(e.target.value)}
+                    disabled={modelLoading || isStreaming}
+                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-2 text-sm text-white backdrop-blur transition hover:bg-white/12 focus:border-tide/40 focus:outline-none disabled:opacity-40"
+                  >
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option key={m.id} value={m.id} className="bg-ink text-white">
+                        {m.label} — {m.size} ({m.description})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ) : null}
             {systemInfoLabel ? (
