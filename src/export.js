@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { ROBOTO_REGULAR, ROBOTO_BOLD } from './fonts.js';
 
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -8,6 +9,13 @@ function formatTime(seconds) {
 
 function stripExtension(name) {
   return name.replace(/\.[^.]+$/, '');
+}
+
+function addRobotoFont(doc) {
+  doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR);
+  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+  doc.addFileToVFS('Roboto-Bold.ttf', ROBOTO_BOLD);
+  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
 }
 
 export function exportMarkdown(entries, videoName) {
@@ -32,24 +40,26 @@ export function exportPdf(entries, videoName) {
   const baseName = stripExtension(videoName || 'video');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
+  addRobotoFont(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Roboto', 'bold');
   doc.setFontSize(16);
-  doc.text(`Video: ${videoName || 'video'}`, margin, y);
+  doc.text(`Описание видео: ${videoName || 'video'}`, margin, y);
   y += 12;
 
   for (const entry of entries) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('Roboto', 'bold');
     doc.setFontSize(11);
-    const header = `Frame ${entry.index}  —  ${formatTime(entry.timeSeconds)}`;
+    const header = `Кадр ${entry.index}  —  ${formatTime(entry.timeSeconds)}`;
     doc.text(header, margin, y);
     y += 7;
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Roboto', 'normal');
     doc.setFontSize(10);
     const lines = doc.splitTextToSize(entry.text, maxWidth);
 
