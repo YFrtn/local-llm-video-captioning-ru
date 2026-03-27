@@ -7,7 +7,7 @@ const SYSTEM_PROMPT =
 
 const INITIAL_STATUS = {
   state: 'checking',
-  detail: 'Checking MLX VLM bridge',
+  detail: 'Проверка MLX VLM',
 };
 
 const INITIAL_SYSTEM_INFO = {
@@ -161,7 +161,7 @@ function TranscriptRow({ item, active = false }) {
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.22em] text-mist/55">
-        <span>{active ? 'Streaming now' : `Frame ${item.index}`}</span>
+        <span>{active ? 'Идёт запись' : `Кадр ${item.index}`}</span>
         <span>{formatClock(item.timeSeconds)}</span>
       </div>
       <p className="text-sm leading-7 text-mist/90">{item.text}</p>
@@ -198,9 +198,9 @@ export default function App() {
   const savedRef = useRef(false);
 
   const stats = [
-    { label: 'Captured Frames', value: String(entries.length + (isStreaming ? 1 : 0)).padStart(2, '0') },
-    { label: 'Requests', value: String(requestCount).padStart(2, '0') },
-    { label: 'Mode', value: isStreaming ? 'Streaming' : 'Idle' },
+    { label: 'Кадры', value: String(entries.length + (isStreaming ? 1 : 0)).padStart(2, '0') },
+    { label: 'Запросы', value: String(requestCount).padStart(2, '0') },
+    { label: 'Режим', value: isStreaming ? 'Запись' : 'Ожидание' },
   ];
 
   useEffect(() => {
@@ -252,8 +252,8 @@ export default function App() {
               nextState === 'online'
                 ? payload.detail || `Bridge ready: ${payload.model}`
                 : nextState === 'warming'
-                  ? payload.detail || 'Warming MLX model'
-                  : 'Start API and MLX server',
+                  ? payload.detail || 'Прогрев MLX модели'
+                  : 'Запустите API и MLX сервер',
           });
 
           if (nextState !== 'online') {
@@ -264,7 +264,7 @@ export default function App() {
         if (!cancelled) {
           setStatus({
             state: 'offline',
-            detail: 'Start API and MLX server',
+            detail: 'Запустите API и MLX сервер',
           });
           timeoutId = window.setTimeout(checkHealth, 3000);
         }
@@ -327,7 +327,7 @@ export default function App() {
     }
 
     if (!file.type.startsWith('video/')) {
-      setErrorMessage('Please choose a video file.');
+      setErrorMessage('Пожалуйста, выберите видеофайл.');
       event.target.value = '';
       return;
     }
@@ -393,7 +393,7 @@ export default function App() {
                 ? current
                 : {
                     state: 'online',
-                    detail: 'Bridge connected',
+                    detail: 'Соединение установлено',
                   },
             );
           },
@@ -421,7 +421,7 @@ export default function App() {
         setErrorMessage(error.message);
         setStatus({
           state: 'offline',
-          detail: 'Bridge lost',
+          detail: 'Соединение потеряно',
         });
       }
     } finally {
@@ -455,12 +455,12 @@ export default function App() {
   const showUnavailableState = status.state === 'offline';
   const modelStatusLabel =
     status.state === 'online'
-      ? 'Model ready'
+      ? 'Модель готова'
       : status.state === 'warming'
-        ? 'Model warming up'
+        ? 'Модель прогревается'
         : status.state === 'checking'
-          ? 'Checking model'
-          : 'Model unavailable';
+          ? 'Проверка модели'
+          : 'Модель недоступна';
   const modelStatusClassName =
     status.state === 'online'
       ? 'border-leaf/35 bg-leaf/10 text-leaf'
@@ -474,7 +474,7 @@ export default function App() {
         <header className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-panel backdrop-blur-2xl lg:flex-row lg:items-end lg:justify-between">
           <div className="w-full text-center">
             <h1 className="font-display text-3xl leading-tight text-white">
-              Qwen3.5 0.8B MLX Video Captioning Demo
+              Описание видео по кадрам — Qwen3.5 MLX
             </h1>
             {!showUnavailableState ? (
               <div className="mt-4 flex flex-col items-center gap-3">
@@ -503,11 +503,11 @@ export default function App() {
                 </div>
                 <p className="mt-6 text-2xl font-semibold text-white">{status.detail}</p>
                 <p className="mt-4 text-sm leading-7 text-mist/65">
-                  Start the local backend services, then this workspace will switch back to the video and transcript view.
+                  Запустите локальные сервисы, после чего интерфейс переключится на видео и транскрипцию.
                 </p>
                 <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/35 text-left">
                   <div className="border-b border-white/10 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-mist/55">
-                    Startup Commands
+                    Команды запуска
                   </div>
                   <pre className="overflow-x-auto px-4 py-4 font-mono text-sm leading-7 text-mist/82">
 {`./scripts/start-mlx-server.sh
@@ -557,8 +557,8 @@ npm run api`}
                           videoRef.current?.pause();
                           setErrorMessage(
                             status.state === 'warming'
-                              ? 'Model is still warming up. Wait until the bridge is ready.'
-                              : 'Start API and MLX server first.',
+                              ? 'Модель ещё прогревается. Подождите.'
+                              : 'Сначала запустите API и MLX сервер.',
                           );
                           return;
                         }
@@ -572,9 +572,9 @@ npm run api`}
                   ) : (
                     <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_top,rgba(116,198,221,0.22),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))] p-8">
                       <div className="max-w-md text-center">
-                        <h3 className="font-display text-3xl text-white">Choose a video file.</h3>
+                        <h3 className="font-display text-3xl text-white">Выберите видеофайл</h3>
                         <p className="mt-3 text-sm leading-7 text-mist/65">
-                          The app captures frames from your local video and streams them to the local MLX backend.
+                          Приложение захватывает кадры из видео и отправляет их на локальный MLX бэкенд для описания.
                         </p>
                       </div>
                     </div>
@@ -586,16 +586,16 @@ npm run api`}
                       className="rounded-full border border-tide/40 bg-black/45 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:border-tide/60 hover:bg-black/60"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      Select Video
+                      Выбрать видео
                     </button>
                   </div>
 
                   <div className="pointer-events-none absolute left-4 top-4 flex flex-wrap gap-2 pr-32">
                     <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs uppercase tracking-[0.22em] text-mist/70">
-                      {videoReady ? 'Video ready' : 'Waiting for clip'}
+                      {videoReady ? 'Видео готово' : 'Ожидание видео'}
                     </span>
                     <span className="max-w-[320px] truncate rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs uppercase tracking-[0.18em] text-mist/60">
-                      {videoName || 'No file selected'}
+                      {videoName || 'Файл не выбран'}
                     </span>
                   </div>
                 </div>
