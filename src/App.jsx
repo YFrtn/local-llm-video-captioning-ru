@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const SYSTEM_PROMPT =
-  'Describe the current video frame as a concise live transcript. Focus on visible action, layout changes, text on screen, people, objects, and motion cues. Avoid speculation.';
+  'Опиши текущий кадр видео как краткую живую стенограмму на русском языке. Сосредоточься на видимых действиях, изменениях в кадре, тексте на экране, людях, объектах и движении. Избегай домыслов.';
 
 const INITIAL_STATUS = {
   state: 'checking',

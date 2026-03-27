@@ -1,110 +1,110 @@
-# Local LLM Video Captioning Demo
+# Local LLM Video Captioning — Русская версия
 
 ![Preview](./preview.jpg)
 
-This project is a local demo for frame-by-frame video captioning with:
+Локальное описание видео по кадрам на **русском языке** с помощью vision-модели, работающей полностью на вашем Mac. Никакие данные не отправляются в облако.
 
-- a React + Tailwind UI
-- a small Express proxy for streaming responses
-- a local `mlx_vlm.server` backend for vision inference
+Форк [stevibe/local-llm-video-captioning](https://github.com/stevibe/local-llm-video-captioning) с русскоязычными промптами.
 
-## Platform Requirement
+## Что внутри
 
-This example targets MLX and requires an Apple Silicon Mac to run the Python backend.
+- **React + Tailwind** — интерфейс для загрузки и воспроизведения видео
+- **Express API** — прокси-сервер со стримингом ответов
+- **mlx_vlm** — локальный бэкенд для vision-инференса на Apple Silicon
 
-The browser UI and Node API are standard JavaScript, but the inference path depends on `mlx-vlm`, so this repository should be treated as Apple Silicon only.
+## Требования
 
-## Why `mlx-vlm` instead of `mlx-lm`
+- **Apple Silicon Mac** (M1/M2/M3/M4) — проект использует MLX, который работает только на чипах Apple
+- **Node.js** 18+
+- **Python** 3.10+ (рекомендуется 3.11)
+- **uv** — менеджер Python-пакетов
 
-The app sends video frame images to the model. That requires the MLX vision stack, not the text-only `mlx-lm` package.
-
-## 1. Install JavaScript dependencies
-
-```bash
-npm install
-```
-
-## 2. Sync the Python environment with `uv`
-
-```bash
-uv sync --python 3.11
-```
-
-The Python dependency is now tracked in `pyproject.toml` and locked with `uv`. `mlx-vlm` currently requires Python `>= 3.10`. The `torch` extra is included because the Qwen 3.5 processor stack also needs `torch` and `torchvision`. If you do not already have `uv`, install it first:
+Если `uv` не установлен:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-If you change the Python dependencies later, use `uv add ...` and commit the updated `uv.lock`.
+## Установка
 
-## 3. Configure environment variables
+### 1. Клонируйте репозиторий
+
+```bash
+git clone https://github.com/YFrtn/local-llm-video-captioning-ru.git
+cd local-llm-video-captioning-ru
+```
+
+### 2. Установите JavaScript-зависимости
+
+```bash
+npm install
+```
+
+### 3. Установите Python-окружение
+
+```bash
+uv sync --python 3.11
+```
+
+При первом запуске будет создано виртуальное окружение и установлены все Python-зависимости (~200 МБ).
+
+### 4. Создайте файл конфигурации
 
 ```bash
 cp .env.example .env
 ```
 
-Defaults:
+Настройки по умолчанию:
 
-- `API_PORT=8787`
-- `MLX_VLM_BASE_URL=http://127.0.0.1:8081`
-- `MLX_MODEL_ID=mlx-community/Qwen3.5-0.8B-MLX-8bit`
-- `MLX_MAX_TOKENS=180`
+| Переменная | Значение | Описание |
+|---|---|---|
+| `API_PORT` | `8787` | Порт Express API |
+| `MLX_VLM_BASE_URL` | `http://127.0.0.1:8081` | Адрес MLX-сервера |
+| `MLX_MODEL_ID` | `mlx-community/Qwen3.5-0.8B-MLX-8bit` | Модель (Qwen 3.5, поддерживает русский) |
+| `MLX_MAX_TOKENS` | `180` | Максимум токенов на кадр |
 
-## 4. Start the MLX backend
+## Запуск
 
+Нужно запустить **3 процесса** (каждый в отдельном терминале):
+
+**Терминал 1** — MLX бэкенд:
 ```bash
 ./scripts/start-mlx-server.sh
 ```
 
-Or run the server manually:
-
-```bash
-uv run -m mlx_vlm.server --port 8081
-```
-
-The helper script waits for `mlx_vlm.server` to become healthy and then sends a small warm-up request so the first real video frame does not fall behind while the model loads. The Node API also treats the backend as "ready" only after that warm-up completes. If you run the Python command manually, you will skip that startup warm-up step.
-
-The model is selected by the Node API via `MLX_MODEL_ID`. On the first request, `mlx_vlm.server` may still need to download model files from Hugging Face, so the first startup on a fresh machine can take noticeably longer.
-
-## 5. Start the app
-
-In one terminal:
-
+**Терминал 2** — API:
 ```bash
 npm run api
 ```
 
-In another terminal:
-
+**Терминал 3** — UI:
 ```bash
 npm run dev
 ```
 
-Or start both together:
-
+Или API + UI одной командой:
 ```bash
 npm run dev:all
 ```
 
-## Usage
+> При первом запуске модель скачивается с Hugging Face (~1 ГБ). Последующие запуски будут быстрыми.
 
-1. Open the app in the browser.
-2. Click `Select Video` and choose a local video file.
-3. Press play.
-4. The app captures frames from the video and sends them to `/api/describe/stream`.
-5. The transcript panel updates as tokens stream back from the MLX backend.
+## Использование
 
-## Environment Variables
+1. Откройте браузер: **http://localhost:5173**
+2. Нажмите **Select Video** и выберите видеофайл
+3. Нажмите **Play**
+4. Описания кадров на русском языке появятся в панели справа в реальном времени
 
-- `API_PORT`: port for the local proxy API
-- `MLX_VLM_BASE_URL`: URL for the running `mlx_vlm.server`
-- `MLX_MODEL_ID`: model name sent to the MLX server
-- `MLX_MAX_TOKENS`: per-frame response cap
-- `MLX_WARMUP_TIMEOUT_SECONDS`: optional timeout for the startup warm-up request
-- `MLX_WARMUP_MAX_TOKENS`: optional token cap for the startup warm-up request
-- `MLX_WARMUP_TIMEOUT_MS`: optional timeout for API-side readiness warm-up checks
+## Что изменено относительно оригинала
 
-## License
+- Системный промпт переведён на русский (`src/App.jsx`)
+- User-промпт переведён на русский с явной инструкцией отвечать на русском (`server/api.js`)
 
-MIT. See [LICENSE](./LICENSE).
+## Благодарности
+
+Основано на [stevibe/local-llm-video-captioning](https://github.com/stevibe/local-llm-video-captioning).
+
+## Лицензия
+
+MIT. См. [LICENSE](./LICENSE).

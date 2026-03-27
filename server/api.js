@@ -67,7 +67,7 @@ function buildMessages(imageDataUrl, frameTimeSeconds, systemPrompt) {
       content: [
         {
           type: 'text',
-          text: `Describe the current video frame captured at ${frameTimeLabel}. Mention visible action, people, objects, screen text, and major scene changes. Keep it concise and factual.`,
+          text: `Опиши текущий кадр видео на отметке ${frameTimeLabel}. Укажи видимые действия, людей, объекты, текст на экране и основные изменения в сцене. Будь кратким и точным. Отвечай только на русском языке.`,
         },
         {
           type: 'image_url',
