@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { exportMarkdown, exportPdf } from './export.js';
 
 const SYSTEM_PROMPT =
   'Опиши текущий кадр видео как краткую живую стенограмму на русском языке. Сосредоточься на видимых действиях, изменениях в кадре, тексте на экране, людях, объектах и движении. Избегай домыслов.';
@@ -586,6 +587,22 @@ npm run api`}
             </div>
 
             <aside className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/6 shadow-panel backdrop-blur-2xl">
+              {entries.length > 0 && (
+                <div className="flex items-center justify-end gap-2 border-b border-white/10 px-5 py-3">
+                  <button
+                    onClick={() => exportMarkdown(entries, videoName)}
+                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
+                  >
+                    Скачать MD
+                  </button>
+                  <button
+                    onClick={() => exportPdf(entries, videoName)}
+                    className="rounded-xl border border-white/15 bg-white/8 px-3 py-1.5 font-mono text-xs text-mist/80 transition hover:bg-white/15"
+                  >
+                    Скачать PDF
+                  </button>
+                </div>
+              )}
               <div className="flex max-h-[760px] min-h-[760px] flex-col gap-4 overflow-y-auto p-5">
                 {transcriptItems.length ? (
                   transcriptItems.map((item) => <TranscriptRow key={item.id} item={item} />)
