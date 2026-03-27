@@ -1,6 +1,6 @@
 # Local LLM Video Captioning — Русская версия
 
-<video src="./Example.mp4" controls width="100%"></video>
+https://github.com/user-attachments/assets/6685744d-0239-4344-bc7d-5108429f317c
 
 Локальное описание видео по кадрам на **русском языке** с помощью vision-модели, работающей полностью на вашем Mac. Никакие данные не отправляются в облако.
 
