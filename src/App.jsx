@@ -646,13 +646,13 @@ npm run api`}
                     history.map((session) => (
                       <div
                         key={session.id}
-                        className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
+                        className="group flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
                       >
                         <button
                           onClick={() => setViewingSession(session)}
-                          className="flex-1 text-left"
+                          className="min-w-0 flex-1 text-left"
                         >
-                          <p className="text-sm font-semibold text-white">{session.videoName}</p>
+                          <p className="break-all text-sm font-semibold text-white">{session.videoName}</p>
                           <p className="mt-1 font-mono text-xs text-mist/50">
                             {new Date(session.date).toLocaleString('ru-RU')} · {session.entries.length} кадров
                           </p>
@@ -662,7 +662,7 @@ npm run api`}
                             const updated = deleteSession(session.id);
                             setHistory(updated);
                           }}
-                          className="ml-3 rounded-lg border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-mist/40 opacity-0 transition hover:border-ember/30 hover:text-ember group-hover:opacity-100"
+                          className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-mist/40 transition hover:border-ember/30 hover:text-ember"
                         >
                           Удалить
                         </button>
