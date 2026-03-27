@@ -1,7 +1,7 @@
 {
-  "name": "local-llm-video-captioning",
-  "description": "Local video captioning demo using React, Express, and mlx_vlm on Apple Silicon Macs.",
-  "version": "0.0.0",
+  "name": "local-llm-video-captioning-ru",
+  "description": "Локальное описание видео по кадрам на русском языке с помощью MLX vision-модели на Apple Silicon.",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
