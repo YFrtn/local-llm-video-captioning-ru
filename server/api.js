@@ -19,6 +19,7 @@ let readyState = 'unknown';
 let readyDetail = 'Ожидание прогрева модели.';
 let warmupPromise = null;
 let systemInfoPromise = null;
+let modelLoadAbortController = null;
 
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
@@ -261,6 +262,13 @@ app.post('/api/model', async (req, res) => {
     return res.json({ model: currentModel, status: 'already_loaded' });
   }
 
+  // Abort any previous model load
+  if (modelLoadAbortController) {
+    modelLoadAbortController.abort();
+  }
+  modelLoadAbortController = new AbortController();
+  const { signal } = modelLoadAbortController;
+
   currentModel = model;
   readyState = 'warming';
   readyDetail = `Загрузка модели: ${currentModel}`;
@@ -268,9 +276,67 @@ app.post('/api/model', async (req, res) => {
 
   try {
     await ensureModelReady();
+    if (signal.aborted) return;
     res.json({ model: currentModel, status: 'ready' });
   } catch (error) {
+    if (signal.aborted) return;
     res.status(500).json({ error: error.message || 'Ошибка загрузки модели.' });
+  } finally {
+    if (modelLoadAbortController?.signal === signal) {
+      modelLoadAbortController = null;
+    }
+  }
+});
+
+app.post('/api/model/cancel', (_req, res) => {
+  if (modelLoadAbortController) {
+    modelLoadAbortController.abort();
+    modelLoadAbortController = null;
+  }
+  readyState = 'ready';
+  readyDetail = `Модель готова: ${currentModel}`;
+  // Revert to default model if nothing was loaded
+  res.json({ model: currentModel, status: 'cancelled' });
+});
+
+app.get('/api/models/downloaded', async (_req, res) => {
+  try {
+    const response = await fetch(`${upstreamBaseUrl}/v1/models`);
+    if (!response.ok) {
+      return res.json({ models: [] });
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch {
+    res.json({ models: [] });
+  }
+});
+
+app.post('/api/model/delete', async (req, res) => {
+  const { model } = req.body ?? {};
+
+  if (!model || typeof model !== 'string') {
+    return res.status(400).json({ error: 'model is required.' });
+  }
+
+  // Unload from MLX server if it's the currently loaded model
+  try {
+    await fetch(`${upstreamBaseUrl}/unload`, { method: 'POST' });
+  } catch {
+    // Server might not have it loaded, that's fine
+  }
+
+  // Delete from HuggingFace cache
+  const cacheDir = `${os.homedir()}/.cache/huggingface/hub`;
+  const modelDirName = `models--${model.replace(/\//g, '--')}`;
+  const modelPath = `${cacheDir}/${modelDirName}`;
+
+  try {
+    const { rm } = await import('node:fs/promises');
+    await rm(modelPath, { recursive: true, force: true });
+    res.json({ model, status: 'deleted' });
+  } catch (error) {
+    res.status(500).json({ error: `Не удалось удалить: ${error.message}` });
   }
 });
 

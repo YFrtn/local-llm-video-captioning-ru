@@ -223,8 +223,11 @@ export default function App() {
   const [modelLoading, setModelLoading] = useState(false);
   const savedRef = useRef(false);
 
+  const previousModelRef = useRef(AVAILABLE_MODELS[0].id);
+
   const handleModelChange = async (modelId) => {
     if (modelId === selectedModel || modelLoading || isStreaming) return;
+    previousModelRef.current = selectedModel;
     setSelectedModel(modelId);
     setModelLoading(true);
     setStatus({ state: 'warming', detail: `Загрузка модели...` });
@@ -247,6 +250,33 @@ export default function App() {
       setStatus({ state: 'offline', detail: 'Ошибка соединения с сервером' });
     } finally {
       setModelLoading(false);
+    }
+  };
+
+  const handleCancelLoad = async () => {
+    try {
+      await fetch('/api/model/cancel', { method: 'POST' });
+    } catch {}
+    setModelLoading(false);
+    setSelectedModel(previousModelRef.current);
+    setStatus({ state: 'online', detail: `Модель готова: ${previousModelRef.current}` });
+  };
+
+  const handleDeleteModel = async (modelId) => {
+    try {
+      const response = await fetch('/api/model/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: modelId }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setErrorMessage('');
+      } else {
+        setErrorMessage(data.error || 'Ошибка удаления');
+      }
+    } catch {
+      setErrorMessage('Ошибка соединения с сервером');
     }
   };
 
@@ -537,7 +567,7 @@ export default function App() {
                   {modelStatusLabel}
                 </div>
                 <p className="text-sm leading-7 text-mist/68">{status.detail}</p>
-                <div className="mt-3">
+                <div className="mt-3 flex items-center justify-center gap-2">
                   <select
                     value={selectedModel}
                     onChange={(e) => handleModelChange(e.target.value)}
@@ -550,6 +580,23 @@ export default function App() {
                       </option>
                     ))}
                   </select>
+                  {modelLoading && (
+                    <button
+                      onClick={handleCancelLoad}
+                      className="rounded-xl border border-ember/30 bg-ember/10 px-3 py-2 text-xs font-semibold text-ember transition hover:bg-ember/20"
+                    >
+                      Отмена
+                    </button>
+                  )}
+                  {!modelLoading && !isStreaming && selectedModel !== AVAILABLE_MODELS[0].id && (
+                    <button
+                      onClick={() => handleDeleteModel(selectedModel)}
+                      className="rounded-xl border border-white/15 bg-white/8 px-3 py-2 text-xs text-mist/60 transition hover:border-ember/30 hover:text-ember"
+                      title="Удалить модель из кэша"
+                    >
+                      Удалить
+                    </button>
+                  )}
                 </div>
               </div>
             ) : null}
