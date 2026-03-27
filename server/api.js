@@ -16,7 +16,7 @@ const warmupImageDataUrl =
 const execFileAsync = promisify(execFile);
 
 let readyState = 'unknown';
-let readyDetail = 'Waiting for warm-up.';
+let readyDetail = 'Ожидание прогрева модели.';
 let warmupPromise = null;
 let systemInfoPromise = null;
 
@@ -178,7 +178,7 @@ async function warmupModel() {
 
     await response.json();
     readyState = 'ready';
-    readyDetail = `Bridge ready: ${defaultModel}`;
+    readyDetail = `Модель готова: ${defaultModel}`;
   } finally {
     clearTimeout(timeout);
   }
@@ -191,11 +191,11 @@ async function ensureModelReady() {
 
   if (!warmupPromise) {
     readyState = 'warming';
-    readyDetail = `Warming model: ${defaultModel}`;
+    readyDetail = `Прогрев модели: ${defaultModel}`;
     warmupPromise = warmupModel()
       .catch((error) => {
         readyState = 'offline';
-        readyDetail = error.message || 'Warm-up failed.';
+        readyDetail = error.message || 'Ошибка прогрева модели.';
         throw error;
       })
       .finally(() => {
@@ -212,7 +212,7 @@ app.get('/api/health', async (_req, res) => {
 
     if (!ok) {
       readyState = 'offline';
-      readyDetail = 'MLX server is not responding.';
+      readyDetail = 'MLX сервер не отвечает.';
       return res.status(503).json({
         upstream: 'offline',
         ready: false,
@@ -240,7 +240,7 @@ app.get('/api/health', async (_req, res) => {
       ready: false,
       model: defaultModel,
       baseUrl: upstreamBaseUrl,
-      detail: warming ? readyDetail : 'Warm-up failed.',
+      detail: warming ? readyDetail : 'Ошибка прогрева модели.',
       error: isAbort ? 'Warm-up timed out.' : error.message,
     });
   }
